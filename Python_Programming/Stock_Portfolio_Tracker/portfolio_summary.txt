@@ -1,0 +1,4 @@
+Your Stock Portfolio:
+MICROSOFT: 33 shares x $300 = $9900
+
+Total Investment Value: $9900
