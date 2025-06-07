@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Language Translator</title>
+</head>
+<body>
+  <h2>Translator</h2>
+  <textarea id="inputText" rows="4" cols="40" placeholder="Enter text...">Hello</textarea><br/><br/>
+
+  From: 
+  <select id="sourceLang">
+    <option value="en">English</option>
+    <option value="es">Spanish</option>
+    <option value="hi">Hindi</option>
+  </select>
+
+  To: 
+  <select id="targetLang">
+    <option value="hi">Hindi</option>
+    <option value="en">English</option>
+    <option value="es">Spanish</option>
+  </select><br/><br/>
+
+  <button onclick="translateText()">Translate</button>
+  <p><strong>Translated Text:</strong></p>
+  <div id="translated" style="border:1px solid #ccc; padding:10px;"></div>
+
+  <script>
+    async function translateText() {
+      const text = document.getElementById("inputText").value;
+      const source = document.getElementById("sourceLang").value;
+      const target = document.getElementById("targetLang").value;
+
+      console.log("Translating:", text, "from", source, "to", target);
+
+      try {
+        const res = await fetch("https://libretranslate.com/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            q: text,
+            source: source,
+            target: target,
+            format: "text"
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
+
+        const data = await res.json();
+        console.log("API response:", data);
+
+        document.getElementById("translated").innerText = data.translatedText;
+
+      } catch (error) {
+        console.error("Error during translation:", error);
+        document.getElementById("translated").innerText = "Translation failed. Check console.";
+      }
+    }
+  </script>
+</body>
+</html>
