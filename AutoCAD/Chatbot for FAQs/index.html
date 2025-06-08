@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FAQ Chatbot</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f7f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .chat-container {
+    width: 400px;
+    background: white;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .chat-header {
+    background: #007bff;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-weight: bold;
+  }
+  .chat-messages {
+    flex-grow: 1;
+    padding: 15px;
+    overflow-y: auto;
+    max-height: 400px;
+  }
+  .message {
+    margin-bottom: 15px;
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 20px;
+    line-height: 1.3;
+  }
+  .user-message {
+    background: #dcf8c6;
+    align-self: flex-end;
+    border-bottom-right-radius: 0;
+  }
+  .bot-message {
+    background: #e3e3e3;
+    align-self: flex-start;
+    border-bottom-left-radius: 0;
+  }
+  .chat-input-area {
+    display: flex;
+    border-top: 1px solid #ddd;
+  }
+  input[type="text"] {
+    flex-grow: 1;
+    border: none;
+    padding: 15px;
+    font-size: 16px;
+    border-radius: 0;
+  }
+  input[type="text"]:focus {
+    outline: none;
+  }
+  button {
+    background: #007bff;
+    border: none;
+    color: white;
+    padding: 0 20px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">FAQ Chatbot</div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <form id="chatForm" class="chat-input-area">
+      <input type="text" id="userInput" autocomplete="off" placeholder="Ask a question..." />
+      <button type="submit" id="sendBtn" disabled>Send</button>
+    </form>
+  </div>
+
+<script>
+  // Sample FAQ Data (questions and answers)
+  const faqData = [
+    { q: "What is CodeAlpha?", a: "CodeAlpha is a software development company offering internships and training." },
+    { q: "How to apply for the internship?", a: "You can apply by visiting our website and filling the application form." },
+    { q: "What technologies are used?", a: "We work with JavaScript, Python, Django, React, and more." },
+    { q: "Is the internship paid?", a: "Currently, our internships are unpaid but provide certificates and job support." },
+    { q: "How long is the internship?", a: "Typically, internships last 2 to 3 months depending on the project." },
+    { q: "Can I work remotely?", a: "Yes, remote internships are available depending on the project requirements." }
+  ];
+
+  // Utility: tokenize string to lowercase words array
+  function tokenize(text) {
+    return text.toLowerCase().match(/\b\w+\b/g) || [];
+  }
+
+  // Utility: vectorize tokens using a simple bag-of-words from all FAQs + input
+  function vectorize(tokens, vocabulary) {
+    const vector = Array(vocabulary.length).fill(0);
+    tokens.forEach(token => {
+      const index = vocabulary.indexOf(token);
+      if (index !== -1) vector[index]++;
+    });
+    return vector;
+  }
+
+  // Utility: cosine similarity between two vectors
+  function cosineSimilarity(vecA, vecB) {
+    let dot = 0, magA = 0, magB = 0;
+    for (let i = 0; i < vecA.length; i++) {
+      dot += vecA[i] * vecB[i];
+      magA += vecA[i] * vecA[i];
+      magB += vecB[i] * vecB[i];
+    }
+    if (magA === 0 || magB === 0) return 0;
+    return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+  }
+
+  // Build vocabulary from all FAQ questions
+  const vocabulary = Array.from(new Set(faqData.flatMap(faq => tokenize(faq.q))));
+
+  // Select DOM elements
+  const chatMessages = document.getElementById('chatMessages');
+  const chatForm = document.getElementById('chatForm');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  // Enable/disable send button based on input
+  userInput.addEventListener('input', () => {
+    sendBtn.disabled = userInput.value.trim() === '';
+  });
+
+  // Add message bubble to chat
+  function addMessage(text, sender) {
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+    msgDiv.textContent = text;
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // Find best FAQ answer using cosine similarity
+  function findBestAnswer(question) {
+    const questionTokens = tokenize(question);
+    const questionVec = vectorize(questionTokens, vocabulary);
+    let maxSim = 0;
+    let bestAnswer = "Sorry, I don't have an answer for that.";
+    faqData.forEach(faq => {
+      const faqTokens = tokenize(faq.q);
+      const faqVec = vectorize(faqTokens, vocabulary);
+      const sim = cosineSimilarity(questionVec, faqVec);
+      if (sim > maxSim) {
+        maxSim = sim;
+        bestAnswer = faq.a;
+      }
+    });
+    return bestAnswer;
+  }
+
+  // Handle form submission
+  chatForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const question = userInput.value.trim();
+    if (!question) return;
+    addMessage(question, 'user');
+    userInput.value = '';
+    sendBtn.disabled = true;
+
+    // Simulate bot thinking delay
+    setTimeout(() => {
+      const answer = findBestAnswer(question);
+      addMessage(answer, 'bot');
+    }, 600);
+  });
+</script>
+</body>
+</html>
